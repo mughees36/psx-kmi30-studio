@@ -246,6 +246,47 @@ input:focus, select:focus {
 .chip { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 10px; background: rgba(13,138,106,0.09); color: var(--brand-deep); font-size: 0.8rem; }
 .inline-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* ── List View ── */
+.stock-list-view { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.stock-list-view .stock-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 100px 110px 90px 70px auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: rgba(255,255,255,0.76);
+    transition: background var(--transition);
+    cursor: pointer;
+}
+.stock-list-view .stock-row:last-child { border-bottom: none; }
+.stock-list-view .stock-row:hover { background: rgba(13,138,106,0.05); }
+.stock-list-view .row-symbol { font-weight: 700; font-size: 0.95rem; }
+.stock-list-view .row-name { color: var(--muted); font-size: 0.84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stock-list-view .row-price { font-weight: 700; font-size: 1rem; text-align: right; }
+.stock-list-view .row-change { font-size: 0.88rem; font-weight: 600; text-align: right; }
+.stock-list-view .row-weight { font-size: 0.82rem; color: var(--muted); text-align: right; }
+.stock-list-view .row-vol { font-size: 0.78rem; color: var(--muted); text-align: right; }
+.stock-list-view .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.list-header {
+    display: grid;
+    grid-template-columns: 80px 1fr 100px 110px 90px 70px auto;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(13,138,106,0.07);
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--line);
+}
+/* ── View Toggle ── */
+.view-toggle { display: flex; gap: 4px; }
+.view-toggle button { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: transparent; cursor: pointer; color: var(--muted); transition: all var(--transition); }
+.view-toggle button.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+.view-toggle button svg { display: block; }
+
 /* ── Positive / Negative ── */
 .positive { color: var(--brand-deep); }
 .negative { color: var(--danger); }
@@ -482,6 +523,14 @@ table tbody tr:hover { background: rgba(17,32,59,0.025); }
                     <section class="panel">
                         <div class="search-row">
                             <input id="stock-search" placeholder="Search by symbol or company name…" oninput="renderStocks()">
+                            <div class="view-toggle">
+                                <button id="view-tile-btn" class="active" title="Tile view" onclick="setStockView('tile')">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+                                </button>
+                                <button id="view-list-btn" title="List view" onclick="setStockView('list')">
+                                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
+                                </button>
+                            </div>
                             <button class="ghost-btn" id="refresh-btn" onclick="refreshStocks()">Refresh from PSX</button>
                         </div>
                         <div class="filter-row">

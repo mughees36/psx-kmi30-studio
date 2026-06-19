@@ -11,6 +11,7 @@ const state = {
     currentView: "auth",
     currentHistoryRange: "1M",
     activeTab: "overview",
+    stockView: localStorage.getItem("stockView") || "tile",
 };
 
 function $(id) { return document.getElementById(id); }
@@ -316,6 +317,15 @@ function renderSkeletonCards(containerId, count = 6) {
     }
 }
 
+// ── View toggle ────────────────────────────────────────
+function setStockView(view) {
+    state.stockView = view;
+    localStorage.setItem("stockView", view);
+    $("view-tile-btn").classList.toggle("active", view === "tile");
+    $("view-list-btn").classList.toggle("active", view === "list");
+    renderStocks();
+}
+
 // ── Stock cards ────────────────────────────────────────
 function renderStocks() {
     const list = $("stock-list");
@@ -329,7 +339,17 @@ function renderStocks() {
     list.innerHTML = "";
     if (!filtered.length) { empty.style.display = "block"; return; }
     empty.style.display = "none";
-    renderStockCards(list, filtered);
+    if (state.stockView === "list") {
+        renderStockList(list, filtered);
+    } else {
+        list.className = "stock-grid";
+        renderStockCards(list, filtered);
+    }
+    // sync toggle buttons in case renderStocks is called before DOM is ready
+    if ($("view-tile-btn")) {
+        $("view-tile-btn").classList.toggle("active", state.stockView === "tile");
+        $("view-list-btn").classList.toggle("active", state.stockView === "list");
+    }
 }
 
 function renderStockCards(container, stocks) {
@@ -364,6 +384,39 @@ function renderStockCards(container, stocks) {
                 </button>
             </div>`;
         container.appendChild(card);
+    });
+}
+
+function renderStockList(container, stocks) {
+    container.className = "stock-list-view";
+    container.innerHTML = `
+        <div class="list-header">
+            <span>Symbol</span><span>Name</span><span style="text-align:right">Price</span>
+            <span style="text-align:right">Change</span><span style="text-align:right">Wt. %</span>
+            <span style="text-align:right">Volume</span><span></span>
+        </div>`;
+    stocks.forEach((stock) => {
+        const changeClass = stock.change >= 0 ? "positive" : "negative";
+        const favorite = isFavorite(stock.symbol);
+        const row = document.createElement("div");
+        row.className = "stock-row";
+        row.innerHTML = `
+            <span class="row-symbol">${stock.symbol}</span>
+            <span class="row-name">${stock.name}</span>
+            <span class="row-price">${formatPrice(stock.current)}</span>
+            <span class="row-change ${changeClass}">
+                ${stock.change >= 0 ? "+" : ""}${stock.change.toFixed(2)}<br>
+                <small>(${stock.change_percent.toFixed(2)}%)</small>
+            </span>
+            <span class="row-weight">${stock.idx_weight_percent.toFixed(2)}%</span>
+            <span class="row-vol">${formatNumber(stock.volume)}</span>
+            <span class="row-actions">
+                <button class="btn" style="padding:5px 10px;font-size:0.8rem;" onclick="openStockDetail('${stock.symbol}')">Detail</button>
+                <button class="${favorite ? "danger-btn" : "ghost-btn"}" style="padding:5px 10px;font-size:0.8rem;" onclick="toggleFavorite('${stock.symbol}')">
+                    ${favorite ? "✕" : "★"}
+                </button>
+            </span>`;
+        container.appendChild(row);
     });
 }
 
