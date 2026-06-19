@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>View Toggle Test</title>
+<style>
+:root { --line: #e0e0e0; --brand: #0d8a6a; --brand-deep: #0a6b52; --muted: #888; --transition: 0.18s ease; }
+body { font-family: sans-serif; padding: 24px; background: #f5f7fa; }
+
+.search-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.search-row input { flex: 1; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; }
+
+/* Tile grid */
+.stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px,1fr)); gap: 16px; }
+.stock-card { padding: 20px; border-radius: 20px; border: 1px solid var(--line); background: #fff; display: grid; gap: 12px; }
+.stock-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.stock-symbol { font-size: 1.05rem; font-weight: 700; }
+.stock-name { color: var(--muted); font-size: 0.87rem; }
+.stock-price { font-size: 1.4rem; font-weight: 700; }
+.chip-row { display: flex; gap: 6px; }
+.chip { border-radius: 999px; padding: 5px 10px; background: rgba(13,138,106,0.09); color: var(--brand-deep); font-size: 0.8rem; }
+.inline-actions { display: flex; gap: 8px; }
+.btn { padding: 8px 16px; border-radius: 8px; background: var(--brand); color: #fff; border: none; cursor: pointer; font-size: 0.85rem; }
+.ghost-btn { padding: 8px 16px; border-radius: 8px; background: transparent; border: 1px solid var(--line); cursor: pointer; font-size: 0.85rem; }
+.positive { color: #0d8a6a; }
+.negative { color: #c0392b; }
+
+/* List view */
+.stock-list-view { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+.stock-list-view .stock-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 100px 110px 90px 70px auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
+    background: #fff;
+    transition: background var(--transition);
+    cursor: pointer;
+}
+.stock-list-view .stock-row:last-child { border-bottom: none; }
+.stock-list-view .stock-row:hover { background: rgba(13,138,106,0.05); }
+.stock-list-view .row-symbol { font-weight: 700; font-size: 0.95rem; }
+.stock-list-view .row-name { color: var(--muted); font-size: 0.84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stock-list-view .row-price { font-weight: 700; font-size: 1rem; text-align: right; }
+.stock-list-view .row-change { font-size: 0.88rem; font-weight: 600; text-align: right; }
+.stock-list-view .row-weight { font-size: 0.82rem; color: var(--muted); text-align: right; }
+.stock-list-view .row-vol { font-size: 0.78rem; color: var(--muted); text-align: right; }
+.stock-list-view .row-actions { display: flex; gap: 6px; justify-content: flex-end; }
+.list-header {
+    display: grid;
+    grid-template-columns: 80px 1fr 100px 110px 90px 70px auto;
+    gap: 12px;
+    padding: 10px 16px;
+    background: rgba(13,138,106,0.07);
+    font-size: 0.78rem; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--line);
+}
+/* View toggle */
+.view-toggle { display: flex; gap: 4px; }
+.view-toggle button { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: transparent; cursor: pointer; color: var(--muted); transition: all var(--transition); }
+.view-toggle button.active { background: var(--brand); color: #fff; border-color: var(--brand); }
+.view-toggle button svg { display: block; }
+
+#status { margin-bottom: 12px; padding: 8px 12px; background: #e8f5e9; border-radius: 8px; font-size: 0.85rem; color: #2e7d32; }
+</style>
+</head>
+<body>
+
+<div id="status">Current view: <strong id="view-label">tile</strong></div>
+
+<div class="search-row">
+    <input placeholder="Search…" oninput="renderStocks()">
+    <div class="view-toggle">
+        <button id="view-tile-btn" class="active" title="Tile view" onclick="setStockView('tile')">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        </button>
+        <button id="view-list-btn" title="List view" onclick="setStockView('list')">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="2" width="14" height="2" rx="1"/><rect x="1" y="7" width="14" height="2" rx="1"/><rect x="1" y="12" width="14" height="2" rx="1"/></svg>
+        </button>
+    </div>
+</div>
+
+<div id="stock-list" class="stock-grid"></div>
+
+<script>
+const state = { stockView: 'tile' };
+const $ = id => document.getElementById(id);
+
+const MOCK_STOCKS = [
+    { symbol: 'FFC', name: 'Fauji Fertilizer Company', current: 519.30, ldcp: 521.96, change: -2.66, change_percent: -0.51, idx_weight_percent: 10.91, volume: 582011, market_cap_mn: 285438 },
+    { symbol: 'ENGROH', name: 'Engro Holdings Limited', current: 270.47, ldcp: 272.79, change: -2.32, change_percent: -0.85, idx_weight_percent: 10.77, volume: 1526760, market_cap_mn: 281837 },
+    { symbol: 'HUBC', name: 'The Hub Power Company', current: 211.43, ldcp: 213.81, change: -2.38, change_percent: -1.11, idx_weight_percent: 7.94, volume: 1661164, market_cap_mn: 207652 },
+    { symbol: 'MEBL', name: 'Meezan Bank Limited', current: 481.55, ldcp: 483.58, change: -2.03, change_percent: -0.42, idx_weight_percent: 8.96, volume: 379228, market_cap_mn: 234459 },
+    { symbol: 'LUCK', name: 'Lucky Cement Limited', current: 422.36, ldcp: 428.30, change: -5.94, change_percent: -1.39, idx_weight_percent: 7.68, volume: 767836, market_cap_mn: 200780 },
+    { symbol: 'SYS', name: 'Systems Limited', current: 151.98, ldcp: 153.49, change: -1.51, change_percent: -0.98, idx_weight_percent: 5.54, volume: 872693, market_cap_mn: 144934 },
+];
+
+function formatPrice(v) { return 'Rs. ' + Number(v).toFixed(2); }
+function formatNumber(v) { return new Intl.NumberFormat('en-US').format(Number(v || 0)); }
+function isFavorite() { return false; }
+
+function setStockView(view) {
+    state.stockView = view;
+    $('view-tile-btn').classList.toggle('active', view === 'tile');
+    $('view-list-btn').classList.toggle('active', view === 'list');
+    $('view-label').textContent = view;
+    renderStocks();
+}
+
+function renderStocks() {
+    const list = $('stock-list');
+    list.innerHTML = '';
+    if (state.stockView === 'list') {
+        renderStockList(list, MOCK_STOCKS);
+    } else {
+        list.className = 'stock-grid';
+        renderStockCards(list, MOCK_STOCKS);
+    }
+}
+
+function renderStockCards(container, stocks) {
+    container.innerHTML = '';
+    stocks.forEach(stock => {
+        const changeClass = stock.change >= 0 ? 'positive' : 'negative';
+        const card = document.createElement('article');
+        card.className = 'stock-card';
+        card.innerHTML = `
+            <div class="stock-top">
+                <div><div class="stock-symbol">${stock.symbol}</div><div class="stock-name">${stock.name}</div></div>
+                <div class="stock-price">${formatPrice(stock.current)}</div>
+            </div>
+            <div class="chip-row">
+                <span class="chip">LDCP ${stock.ldcp.toFixed(2)}</span>
+                <span class="chip">Wt. ${stock.idx_weight_percent.toFixed(2)}%</span>
+            </div>
+            <div class="${changeClass}" style="font-weight:600;font-size:0.93rem;">
+                ${stock.change >= 0 ? '+' : ''}${stock.change.toFixed(2)} (${stock.change_percent.toFixed(2)}%)
+            </div>
+            <div style="color:var(--muted);font-size:0.82rem;">Vol ${formatNumber(stock.volume)} · Mkt Cap ${formatNumber(stock.market_cap_mn)} Mn</div>
+            <div class="inline-actions">
+                <button class="btn">Open Detail</button>
+                <button class="ghost-btn">Watchlist</button>
+            </div>`;
+        container.appendChild(card);
+    });
+}
+
+function renderStockList(container, stocks) {
+    container.className = 'stock-list-view';
+    container.innerHTML = `
+        <div class="list-header">
+            <span>Symbol</span><span>Name</span><span style="text-align:right">Price</span>
+            <span style="text-align:right">Change</span><span style="text-align:right">Wt. %</span>
+            <span style="text-align:right">Volume</span><span></span>
+        </div>`;
+    stocks.forEach(stock => {
+        const changeClass = stock.change >= 0 ? 'positive' : 'negative';
+        const row = document.createElement('div');
+        row.className = 'stock-row';
+        row.innerHTML = `
+            <span class="row-symbol">${stock.symbol}</span>
+            <span class="row-name">${stock.name}</span>
+            <span class="row-price">${formatPrice(stock.current)}</span>
+            <span class="row-change ${changeClass}">
+                ${stock.change >= 0 ? '+' : ''}${stock.change.toFixed(2)}<br>
+                <small>(${stock.change_percent.toFixed(2)}%)</small>
+            </span>
+            <span class="row-weight">${stock.idx_weight_percent.toFixed(2)}%</span>
+            <span class="row-vol">${formatNumber(stock.volume)}</span>
+            <span class="row-actions">
+                <button class="btn" style="padding:5px 10px;font-size:0.8rem;">Detail</button>
+                <button class="ghost-btn" style="padding:5px 10px;font-size:0.8rem;">★</button>
+            </span>`;
+        container.appendChild(row);
+    });
+}
+
+// Init
+renderStocks();
+</script>
+</body>
+</html>
