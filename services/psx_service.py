@@ -259,14 +259,39 @@ def get_kmi30_index():
     if len(points) < 2:
         raise PSXServiceError("Not enough KMI30 index data available.")
 
-    # points[0] = today, points[1] = yesterday; each: [timestamp, close, volume, open]
-    today_close = points[0][1]
+    # points[0] = last completed session close; each: [timestamp, close, volume, open]
+    last_eod_close = points[0][1]
+    last_eod_timestamp = points[0][0]
     prev_close = points[1][1]
-    change = round(today_close - prev_close, 2)
-    change_percent = round((change / prev_close) * 100, 2) if prev_close else 0.0
+
+    # Determine if EOD has updated for today (market closed) or we're mid-session
+    from datetime import datetime, timedelta
+    pst_offset = timedelta(hours=5)
+    today_pst = (datetime.utcnow() + pst_offset).date()
+    last_eod_date = (datetime.utcfromtimestamp(last_eod_timestamp) + pst_offset).date()
+
+    if last_eod_date < today_pst:
+        # EOD hasn't updated yet — market is open intraday.
+        # Derive live index by adding today's idx_points to the last EOD close.
+        try:
+            stocks = get_kmi30_stocks()
+            idx_points_sum = sum(s["idx_points"] for s in stocks)
+            today_level = round(last_eod_close + idx_points_sum, 2)
+            change = round(idx_points_sum, 2)
+        except Exception:
+            today_level = last_eod_close
+            change = round(last_eod_close - prev_close, 2)
+        base_for_pct = last_eod_close
+    else:
+        # EOD has today's close already
+        today_level = last_eod_close
+        change = round(last_eod_close - prev_close, 2)
+        base_for_pct = prev_close
+
+    change_percent = round((change / base_for_pct) * 100, 2) if base_for_pct else 0.0
 
     result = {
-        "level": round(today_close, 2),
+        "level": today_level,
         "change": change,
         "change_percent": change_percent,
     }
