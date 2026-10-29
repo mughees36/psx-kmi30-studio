@@ -30,6 +30,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 def serve_frontend():
     return FileResponse("static/index.html")
 
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}
+
 @app.on_event("startup")
 def on_startup():
     Base.metadata.create_all(bind=engine)
