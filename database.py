@@ -5,11 +5,12 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "sqlite:///./test.db")
 
-# Some providers still issue the legacy postgres:// scheme, while SQLAlchemy
-# expects postgresql://. Neon currently supplies postgresql://, so this also
-# keeps the app compatible if the URL format changes in the future.
+# Explicitly select the psycopg v3 dialect installed by this project. Without
+# the driver suffix, SQLAlchemy defaults to the older psycopg2 package.
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+psycopg://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+psycopg://", 1)
 
 engine_options = {"pool_pre_ping": True}
 if DATABASE_URL.startswith("sqlite"):
